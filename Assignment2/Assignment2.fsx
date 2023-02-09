@@ -31,9 +31,9 @@ combinePair ["Marry"; "had"; "a"; "little"; "lamb"; "its"; "fleece"; "was"; "whi
 
 
 // Exercise 2.4
-type complex = { number : float * float };;
-let mkComplex a b = { number = (a,b) };;
-let complexToPair c = c.number;;
+type complex = float * float;;
+let mkComplex a b = complex(a,b);;
+let complexToPair ((a,b) : complex) = (a,b);;
 
 let (|+|) c1 c2 = 
     let (a, b) = complexToPair c1
@@ -58,8 +58,8 @@ let (|-|) c1 c2 = c1 |+| -.c2;;
 
 let (|/|) c1 c2 = c1 |*| &c2;;
 
-let c1 = {number = (1.0, 2.0)};;
-let c2 = {number = (5.0, 4.0)};;
+let c1 = (1.0, 2.0);;
+let c2 = (5.0, 4.0);;
 
 
 // Exercise 2.5
@@ -79,4 +79,104 @@ let implode (cs : char list) = List.foldBack (fun x s -> string x + s) cs "";;
 implode [];;
 implode ['H'; 'e'; 'l'; 'l'; 'o'; ' '; 'W'; 'o'; 'r'; 'l'; 'd'; '!'];;
 
-let implodeRev (cs : char list) = List.fold (fun x s -> string x + s) "" cs;;
+let implodeRev (cs : char list) = List.fold (fun s x -> string x + s) "" cs;;
+implodeRev ['H'; 'e'; 'l'; 'l'; 'o'; ' '; 'W'; 'o'; 'r'; 'l'; 'd'; '!'];;
+
+// Exercise 2.7
+let toUpper1 s = s |> explode2 |> List.map System.Char.ToUpper |> implode;;
+let toUpper = explode2 >> List.map System.Char.ToUpper >> implode;;
+
+
+toUpper "Hello";;
+toUpper1 "Hello";;
+
+// Exercise 2.8
+let rec ack = function
+    | (m,n) when m = 0 -> n + 1
+    | (m,n) when m > 0 && n = 0 -> ack(m-1,1)
+    | (m,n) when m > 0 && n > 0 -> ack(m-1, ack(m, n-1))
+    | (_,_) -> failwith("ack is only defined for non-negative numbers");;
+
+
+// Exercise 2.9
+let time f =
+    let start = System.DateTime.Now
+    let res = f ()
+    let finish = System.DateTime.Now
+    (res, finish - start);;
+
+//time (fun () -> ack(3,11));;
+
+let timeArg1 f a = time (fun () -> f a);;
+
+// Exercise 2.10
+let rec downto3 f = fun n e ->
+    match n with
+    | n' when n' > 0 -> downto3 f (n'-1) (f n' e)
+    | _ -> e;;
+
+let fac n = downto3 ( * ) n 1;;
+let range g n = downto3 (fun elem acc -> (g elem)::acc) n [];;
+
+
+// Exercise 2.11
+type word = (char * int) list;;
+let hello = ('H',4)::('E',1)::('L',1)::('L',1)::('O',1)::[];;
+
+
+// Exercise 2.12
+type squareFun = word -> int -> int -> int;;
+let singleLetterScore word pos acc = snd(List.item pos word) + acc;;
+let doubleLetterScore word pos acc = snd(List.item pos word) * 2 + acc;;
+let tripleLetterScore word pos acc = snd(List.item pos word) * 3 + acc;;
+
+singleLetterScore hello 4 0;;
+doubleLetterScore hello 4 0;;
+tripleLetterScore hello 4 0;;
+singleLetterScore hello 4 42;;
+doubleLetterScore hello 4 42;;
+tripleLetterScore hello 4 42;;
+
+
+// Exercise 2.13
+let doubleWordScore _ _ acc = acc * 2;;
+let tripleWordScore _ _ acc = acc * 3;;
+
+doubleWordScore hello 4 0;;
+tripleWordScore hello 4 0;;
+doubleWordScore hello 12345 42;;
+tripleWordScore hello 12345 42;;
+
+
+// Exercise 2.14
+let consonants = ['B';'C';'D';'F';'G';'H';'J';'K';'L';'M';'N';'P';'Q';'R';'S';'T';'V';'W';'Y';'X';'Z'];;
+
+let oddConsonants word _ acc = 
+    if ((List.fold (fun acc elem -> 
+        if (List.exists ((=) (fst(elem))) consonants)
+        then (acc + 1) else acc) 0 word) % 2 = 0) then acc else -acc;;
+
+let helo = ('H',4)::('E',1)::('L',1)::('O',1)::[];;
+oddConsonants helo 0 10;;
+oddConsonants hello 0 10;;
+
+
+// Exercise 2.15
+type square = (int * squareFun) list
+
+let SLS : square = [(0, singleLetterScore)];;
+let DLS : square = [(0, doubleLetterScore)];;
+let TLS : square = [(0, tripleLetterScore)];;
+let DWS : square = SLS @ [(1, doubleWordScore)];;
+let TWS : square = SLS @ [(1, tripleWordScore)];;
+
+let calculatePoints (squares : square list) w = 
+    (List.mapi (fun i square -> 
+        List.map (fun pair -> (fst(pair), (snd(pair) w i))) square) squares |>
+    List.fold (fun acc elem -> elem @ acc) [] |>
+    List.sortBy (fun pair -> fst(pair)) |>
+    List.map (fun pair -> snd(pair)) |>
+    List.fold (fun acc elem -> elem << acc) id) 0;;
+
+calculatePoints [DLS; SLS; TLS; SLS; DWS] hello;;
+calculatePoints [DLS; DWS; TLS; TWS; DWS] hello;;
