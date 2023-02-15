@@ -171,12 +171,12 @@ let DWS : square = SLS @ [(1, doubleWordScore)];;
 let TWS : square = SLS @ [(1, tripleWordScore)];;
 
 let calculatePoints (squares : square list) w = 
-    (List.mapi (fun i square -> 
-        List.map (fun pair -> (fst(pair), (snd(pair) w i))) square) squares |>
+    (List.mapi (fun i -> 
+        List.map (fun (p, f) -> p, (f w i))) squares |>
     List.fold (fun acc elem -> elem @ acc) [] |>
-    List.sortBy (fun pair -> fst(pair)) |>
-    List.map (fun pair -> snd(pair)) |>
-    List.fold (fun acc elem -> elem << acc) id) 0;;
+    List.sortBy (fun (p, _) -> p) |>
+    List.map (fun (_, f) -> f) |>
+    List.fold (fun acc elem -> acc >> elem) id) 0;;
 
 calculatePoints [DLS; SLS; TLS; SLS; DWS] hello;;
 calculatePoints [DLS; DWS; TLS; TWS; DWS] hello;;
