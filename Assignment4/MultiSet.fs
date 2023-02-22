@@ -3,7 +3,8 @@
 type MultiSet<'a when 'a : comparison> = M of Map<'a, uint32> * uint32
 
 let empty = M (Map.empty<'a, uint32>, 0u)
-let isEmpty (M (_,l)) = 
+
+let isEmpty (M (m,l)) = 
     match l with
     | 0u -> true
     | _ -> false
@@ -11,7 +12,7 @@ let isEmpty (M (_,l)) =
 let size (M (_,l)) = l
 
 let contains a (M (m,_)) = 
-    match (Map.tryFind a m) with
+    match Map.tryFind a m with
     | None -> false
     | _ -> true
 
@@ -43,7 +44,7 @@ let removeSingle a (M (m,l)) =
 let fold f acc (M (m,_)) =
     Map.fold f acc m
 
-let foldBack f (M (m,_))acc =
+let foldBack f (M (m,_)) acc =
     Map.foldBack f m acc
 
 let rec ofList = 
@@ -51,6 +52,8 @@ let rec ofList =
     | [] -> empty
     | x::xs -> (addSingle x (ofList xs))
 
+// ofListN is used as a helper function, since in the map function, we already know the number of items, for each item.
+// We could use the ofList function instead, but this would be a lot less effective, if we have many of the same element.
 let rec ofListN = 
     function
     | [] -> empty
@@ -60,7 +63,7 @@ let rec toList (M (m,l))=
     match l with
     | 0u -> []
     | _ -> 
-        let (k,_) = m |> Seq.head
+        let (k,_) = Map.toList m |> Seq.head
         k::toList (removeSingle k (M (m,l)))
 
 let map f (M (m,_)) = 
@@ -69,7 +72,32 @@ let map f (M (m,_)) =
     |> ofListN
 
 //Not implmented
-let union (M ((m1 : Map<'a,uint32>), l1)) (M ((m2 : Map<'a,uint32>), l2)) = (M (m1,l1))
-let sum (M ((m1 : Map<'a,uint32>), l1)) (M ((m2 : Map<'a,uint32>), l2)) = (M (m1,l1))
-let subtract (M ((m1 : Map<'a,uint32>), l1)) (M ((m2 : Map<'a,uint32>), l2)) = (M (m1,l1))
-let intersection (M ((m1 : Map<'a,uint32>), l1)) (M ((m2 : Map<'a,uint32>), l2)) = (M (m1,l1))
+let rec union (M ((m1 : Map<'a,uint32>), l1)) (M ((m2 : Map<'a,uint32>), l2)) = 
+    Map.fold (fun acc a n -> 
+        if (contains a acc) 
+        then 
+            match numItems a acc with
+            | n' when n > n' -> add a n acc 
+            | _ -> acc
+        else add a n acc) (M (m2,l2)) m1
+
+let sum (M ((m1 : Map<'a,uint32>), l1)) (M ((m2 : Map<'a,uint32>), l2)) = 
+    Map.fold (fun acc a n -> 
+        if (contains a acc) 
+        then add a n acc
+        else add a n acc) (M (m2,l2)) m1
+
+let subtract (M ((m1 : Map<'a,uint32>), l1)) (M ((m2 : Map<'a,uint32>), l2)) =
+    Map.fold (fun acc a n -> 
+        if (contains a acc) 
+        then remove a n acc
+        else acc) (M (m1,l1)) m2
+
+let intersection (M ((m1 : Map<'a,uint32>), l1)) (M ((m2 : Map<'a,uint32>), l2)) =
+    Map.fold (fun acc a n -> 
+        if (contains a (M (m1, l1)))
+        then 
+            match numItems a (M (m1, l1)) with
+            | n' when n > n' -> add a n' acc
+            | _ -> add a n acc
+        else acc) empty m2
