@@ -63,13 +63,20 @@
         map (fun x ->
             match x with
             | _ when x < 128uy -> Square 0uy
-            | _ when x >= 128uy -> Square 255uy) img
+            | _ when x >= 128uy -> Square 255uy
+            | _ -> failwith "value out of bounds"
+            ) img
+            
 
 (* Question 1.4 *)
 
-    let fold _ = failwith "not implemented"
+    let rec fold folder acc img =
+        match img with
+        | Square x -> folder acc x
+        | Quad (g1,g2,g3,g4) -> fold folder (fold folder (fold folder (fold folder acc g1) g2) g3) g4
     
-    let countWhite2 _ = failwith "not implemented"
+    let countWhite2 img = fold (fun acc x ->
+        if x = 255uy then acc + 1 else acc) 0 img
 
 (* 2: Code Comprehension *)
     let rec foo =
@@ -89,23 +96,28 @@
     
     Q: What are the types of functions foo and bar?
 
-    A: <Your answer goes here>
+    A: 
+        foo : int -> string
+        bar : int list -> string list
 
 
     Q: What does the function bar do.
        Focus on what it does rather than how it does it.
 
-    A: <Your answer goes here>
+    A: foo takes an integer and returns a string of the integer in binary.
+       bar takes a list of integers and applies foo on them (similar to List.map)
     
     Q: What would be appropriate names for functions 
        foo and bar?
 
-    A: <Your answer goes here>
+    A: foo could be decimalToBinary and bar could be manyDecimalToBinary
         
     Q: The function foo does not return reasonable results for all possible inputs.
        What requirements must we have on the input to foo in order to get reasonable results?
     
-    A: <Your answer goes here>
+    A: Input cannot be less than 1. If it is zero, 
+       it will produce the empty string, and if it is negative, 
+       it will produce the same result as the positive number.
     *)
         
 
@@ -118,15 +130,22 @@
     
     Q: What warning and why?
 
-    A: <Your answer goes here>
+    A: The compiler is not sure we have covered all cases in pattern matching.
+       This is true, since we do not cover the case for negative odd numbers,
+       since [any odd number] % 2 = -1
 
     *)
 
-    let foo2 _ = failwith "not implemented"
+    let foo2 x = 
+        match x with
+        | 0 -> ""
+        | x when x % 2 = 0 -> foo (x / 2) + "0"
+        | x when x % 2 = 1 -> foo (x / 2) + "1"
+        | _ -> failwith "Function failed as it should"
 
 (* Question 2.3 *) 
 
-    let bar2 _ = failwith "not implemented"
+    let bar2 xs = List.map (fun x -> foo x) xs
 
 (* Question 2.4 *)
 
@@ -139,20 +158,34 @@
        Keep in mind that all steps in an evaluation chain must evaluate to the same value
        ((5 + 4) * 3 --> 9 * 3 --> 27, for instance).
 
-    A: <Your answer goes here>
+    A: bar is not tail recursive, because the resolved value of (foo x) will be kept on the stack until we reach that evaluation again.
+       This is because we cannot concatenate that value onto the (bar xs) element, since that value is yet to be computed.
     
     Q: Even though neither `foo` nor `bar` is tail recursive only one of them runs the risk of overflowing the stack.
        Which one and why does  the other one not risk overflowing the stack?
 
-    A: <Your answer goes here>
+    A: bar runs the risk because all the computed values with foo are waiting to be concetenated to the list. //TODO: Why does foo not overflow the stack
 
     *)
 (* Question 2.5 *)
 
-    let fooTail _ = failwith "not implemented"
+    let fooTail x = 
+        let rec aux acc =
+            function
+            | 0 -> acc
+            | x when x % 2 = 0 -> aux ("0"+acc) (x / 2)
+            | x when x % 2 = 1 -> aux ("1"+acc) (x / 2)
+            | _ -> failwith "unexpected value"
+        aux "" x
 
 (* Question 2.6 *)
-    let barTail _ = failwith "not implemented"
+    let barTail lst =
+        let rec aux lst' c =
+            match lst' with
+            | []      -> c []
+            | x :: xs -> aux xs (fun n -> c ((foo x)::n))
+
+        aux lst id
 
 (* 3: Matrix operations *)
 
@@ -174,22 +207,54 @@
 
 (* Question 3.1 *)
 
-    let failDimensions _ = failwith "not implemented"
+    let failDimensions a b = 
+        failwith (
+            sprintf "Invalid matrix dimensions: m1 rows = %d, m1 columns = %d, m2 rows = %d, m2 columns = %d"
+                (numRows a) (numCols a) (numRows b) (numCols b))
 
 (* Question 3.2 *)
 
-    let add _ = failwith "not implemented"
+    let add a b = 
+        if (numRows a <> numRows b || numCols a <> numCols b |> not)
+        then failDimensions a b
+        else 
+             init (fun i j -> (get a i j) + (get b i j)) 
+                (numRows a) (numCols a)
 
 (* Question 3.3 *)
     
     let m1 = (init (fun i j -> i * 3 + j + 1) 2 3) 
     let m2 = (init (fun j k -> j * 2 + k + 1) 3 2)
 
-    let dotProduct _ = failwith "not implemented"
-    let mult _ = failwith "not implemented"
+    let dotProduct a b row col = 
+        let rec aux acc =
+            function
+            | 0 -> acc
+            | n -> 
+                aux ((get a row (n-1)) * (get b (n-1) col) + acc) (n-1)
+
+        aux 0 (numCols a)
+
+    let mult a b = 
+        if (numRows a <> numCols b) then failDimensions a b
+        else
+            init (fun i j -> dotProduct a b i j) (numRows a) (numCols b)
 
 (* Question 3.4 *)
-    let parInit _ = failwith "not implemented"
+
+    let parInit f row col = 
+        let startM = init (fun _ _ -> 0) row col
+        
+        [for i in [0..row-1] do
+            for j in [0..col-1] do yield (i, j)] |>
+
+        List.map (fun (i,j) -> async { do set startM i j (f i j) }) |>
+        Async.Parallel |> 
+        Async.RunSynchronously |> ignore
+
+        
+        startM
+
 
 (* 4: Stack machines *)
 
@@ -198,12 +263,39 @@
 
 (* Question 4.1 *)
 
-    type stack = unit (* replace this entire type with your own *)
-    let emptyStack _ = failwith "not implemented"
+    type stack = int list
+
+    let emptyStack : unit -> stack = fun () -> List<int>.Empty
 
 (* Question 4.2 *)
+    
+    let runCmd cmd stack = 
+        match cmd with
+        | Push x -> x::stack
+        | Add -> 
+            if List.length stack < 2 then failwith "empty stack" else
+            let a = List.head stack
+            let tempRest = List.tail stack
+            let b = List.head tempRest
+            let rest = List.tail tempRest
+            (a+b)::rest
+        | Mult ->
+            if List.length stack < 2 then failwith "empty stack" else
+            let a = List.head stack
+            let tempRest = List.tail stack
+            let b = List.head tempRest
+            let rest = List.tail tempRest
+            (a*b)::rest
 
-    let runStackProgram _ = failwith "not implemented"
+    let runStackProg prog = 
+        let stack = emptyStack ()
+
+        let rec aux prog stack =
+            match prog with
+            | [] -> List.head stack
+            | c::cs -> aux cs (runCmd c stack)                    
+
+        aux prog stack
 
 (* Question 4.3 *)
     
@@ -224,8 +316,13 @@
 
     let evalSM (SM f) = f (emptyStack ())
 
-    let push _ = failwith "not implemented"
-    let pop _ = failwith "not implemented"
+    let push (x : int) = 
+        SM (fun s -> Some ((), x::s))
+
+    let pop = 
+        SM (fun s -> 
+            if List.isEmpty s then None else 
+                Some ((List.head s), List.tail s))
 
 (* Question 4.4 *)
 
@@ -238,10 +335,41 @@
 
     let state = new StateBuilder()
 
-    let runStackProg2 _ = failwith "not implemented"
-    
+    let runCmd2 cmd = state {
+        match cmd with
+            | Push x -> 
+                do! push x
+            | Add ->
+                let! a = pop
+                let! b = pop
+                do! (push (a+b))
+            | Mult ->
+                let! a = pop
+                let! b = pop
+                do! (push (a*b))
+        }
+
+    let rec runStackProg2 prog = state {
+        match prog with
+        | [] -> return! pop
+        | c::cs -> 
+            do! runCmd2 c
+            return! (runStackProg2 cs)
+        }
+
 (* Question 4.5 *)
     
     open JParsec.TextParser
 
-    let parseStackProg _ = failwith "not implemented"
+    let whitespaceChar = satisfy (fun c -> System.Char.IsWhiteSpace c) <?> "whitespace"
+
+    let spaces         = many whitespaceChar <?> "spaces"
+    let spaces1        = many1 whitespaceChar <?> "space1"
+    
+    let pPush = pstring "PUSH" 
+
+    let (.>*>.) p1 p2 = (p1 .>> spaces) .>>. p2
+    let (.>*>) p1 p2  = (p1 .>> spaces) .>> p2
+    let (>*>.) p1 p2  = (p1 .>> spaces) >>. p2 
+    
+    let parseStackProg progString = failwith "not implemented"
