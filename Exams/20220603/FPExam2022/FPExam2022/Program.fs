@@ -25,10 +25,17 @@ let testQ3 () =
 
 let testQ4 () =
     printfn "Testing Question 4"
-    // place debug prints for Q4 here
+    printfn "%A" (
+        "PUSH 5\nPUSH 4 \nADD \n PUSH 8\nMULT \n" |> 
+        JParsec.TextParser.run parseStackProg |> 
+        JParsec.TextParser.getSuccess |>
+        runStackProg2 |>
+        evalSM |>
+        Option.map fst)
     ()
 
 [<EntryPoint>]
 let main argv =
-    testQ1 ()
+    //testQ1 ()
+    testQ4 ()
     0 // return an integer exit code

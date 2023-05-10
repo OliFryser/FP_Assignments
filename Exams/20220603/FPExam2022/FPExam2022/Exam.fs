@@ -366,10 +366,15 @@
     let spaces         = many whitespaceChar <?> "spaces"
     let spaces1        = many1 whitespaceChar <?> "space1"
     
-    let pPush = pstring "PUSH" 
+    let pPush = spaces >>. pstring "PUSH" .>> spaces1
+    let pAdd = spaces >>. pstring "ADD" .>> spaces
+    let pMult = spaces >>. pstring "MULT" .>> spaces
 
-    let (.>*>.) p1 p2 = (p1 .>> spaces) .>>. p2
-    let (.>*>) p1 p2  = (p1 .>> spaces) .>> p2
-    let (>*>.) p1 p2  = (p1 .>> spaces) >>. p2 
-    
-    let parseStackProg progString = failwith "not implemented"
+    let StackParse, sref = createParserForwardedToRef<cmd>()
+    let PushParse = pPush >>. pint32 |>> Push <?> "Push"
+    let AddParse = pAdd |>> (fun _ -> Add) <?> "Add"
+    let MultParse = pMult |>> (fun _ -> Mult) <?> "Mult"
+    do sref := choice [PushParse; AddParse; MultParse]
+
+    let parseStackProg : Parser<stackProgram> = 
+        many (StackParse)
