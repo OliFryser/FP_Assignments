@@ -265,7 +265,7 @@
 
     type stack = int list
 
-    let emptyStack : unit -> stack = fun () -> List<int>.Empty
+    let emptyStack () : stack = List<int>.Empty
 
 (* Question 4.2 *)
     
@@ -289,10 +289,9 @@
 
     let runStackProg prog = 
         let stack = emptyStack ()
-
         let rec aux prog stack =
             match prog with
-            | [] -> List.head stack
+            | [] -> if List.isEmpty stack then failwith "empty stack" else List.head stack
             | c::cs -> aux cs (runCmd c stack)                    
 
         aux prog stack
@@ -370,11 +369,10 @@
     let pAdd = spaces >>. pstring "ADD" .>> spaces
     let pMult = spaces >>. pstring "MULT" .>> spaces
 
-    let StackParse, sref = createParserForwardedToRef<cmd>()
     let PushParse = pPush >>. pint32 |>> Push <?> "Push"
     let AddParse = pAdd |>> (fun _ -> Add) <?> "Add"
     let MultParse = pMult |>> (fun _ -> Mult) <?> "Mult"
-    do sref := choice [PushParse; AddParse; MultParse]
+    let StackParse = choice [PushParse; AddParse; MultParse]
 
     let parseStackProg : Parser<stackProgram> = 
         many (StackParse)

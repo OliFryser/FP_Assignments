@@ -8,5 +8,5 @@
 *)
 
 #load "JParsec.fs"
-#load "Exam.fs"
+#load "Submission.fs"
 open Exam2022;;
