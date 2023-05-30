@@ -92,5 +92,102 @@ let loopPow a b =
 // g : 'a list -> 'a list -> bool
 
 // Q2.1.2
-// f removes the element x from a list, if the element is the first or second element, and returns it as an option. If not it returns None.
-// g 
+// f removes the first occurence of element x in a list and returns 
+// Some [list without x] or None if x does not exist in the list.
+
+// g checks if two lists have the same elements in any order. Returns true or false.
+
+
+// Q2.1.3
+// f could be called removeElemFromList
+// g could be called checkSameElems
+
+
+// Q2.2
+// The compiler does not know if the list has all cases covered.
+// It does, however, but it does not know it, because it is in when clauses.
+// The second when clause is however redundant, because they can either be equal or not.
+
+let rec f2 x =
+    function
+    | []                -> None
+    | y::ys when x = y  -> Some ys
+    | y::ys             -> 
+        match f2 x ys with
+        | Some ys' -> Some (y::ys')
+        | None     -> None
+
+// Q2.3
+let rec fOpt x =
+    function
+    | []            -> None
+    | y::ys when x = y  -> Some ys
+    | y::ys             -> 
+        fOpt x ys |> Option.map (fun o -> y::o)
+
+let rec gOpt xs =
+    function
+    | []    -> xs = []
+    | y::ys -> 
+        fOpt y xs 
+        |> Option.map (fun o -> gOpt o ys) 
+        |> Option.defaultValue false
+
+
+// Q2.4
+
+(*
+
+g is the tail-recursive function. Say we are comparing the two lists xs [1;2;] and ys [2;1]
+
+g [1;2] [2;1] 
+-> g (f 2 [1;2]) [1]
+-> g [1] [1]
+-> g (f 1 [1]) []
+-> g [] []
+-> true
+
+We always call g after all other computations, meaning no calls of g are waiting on other 
+calls of g.
+
+*)
+
+let rec fTail (x : 'a) (ys : 'a list) =
+    let rec aux (c : 'a list option -> 'a list option) x =
+        function
+        | [] -> None
+        | y::ys when x = y -> c (Some ys)
+        | y::ys -> 
+            aux (fun lst -> c (y::(Option.get lst) |> Some)) x ys
+
+    aux id x ys
+    
+
+// Q3.1
+let rec calculatePi (x : uint64) : decimal =
+    let rec aux (acc : decimal) =
+        function
+        | 0UL                  -> 3M+acc
+        | x' when x' % 2UL = 0UL  -> 
+            aux (acc-(4M/(decimal) ((2UL*x')*(2UL*x'+1UL)*(2UL*x'+2UL)))) (x'-1UL)
+        | x' -> 
+            aux (acc+(4M/(decimal) ((2UL*x')*(2UL*x'+1UL)*(2UL*x'+2UL)))) (x'-1UL)
+
+    aux 0M x
+
+let piSeq : seq<decimal> =
+    Seq.initInfinite (fun n -> calculatePi ((uint64) n))
+
+let circleArea (x : float) =
+    let r = (decimal x)
+    Seq.map (fun pi -> pi*r*r) piSeq
+
+let sphereVolume (x : float) =
+    let r = (decimal x)
+    Seq.map (fun pi -> (4M/3M)*pi*r*r*r) piSeq
+
+let circleSphere (r : float) =
+    seq {
+        (yield (circleArea r))
+        (yield (sphereVolume r))
+    }
